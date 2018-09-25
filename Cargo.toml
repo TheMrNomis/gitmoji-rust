@@ -1,0 +1,6 @@
+[package]
+name = "gitmoji-rust"
+version = "0.1.0"
+authors = ["n0m1s <git@homnomnom.fr>"]
+
+[dependencies]
