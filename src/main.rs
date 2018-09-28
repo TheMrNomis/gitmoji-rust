@@ -21,10 +21,10 @@ fn gitmoji_path() -> PathBuf {
 fn main() {
     let url = "https://github.com/carloscuesta/gitmoji/";
 
-    let mut gitmoji_dir = gitmoji_path();
-
-    let repo = match Repository::clone(url, gitmoji_dir) {
-        Ok(repo) => repo,
-        Err(e) => panic!("failed to clone: {}", e),
+    let repo_dir = gitmoji_path();
+    let repo = match Repository::open(&repo_dir) {
+        Ok(r) => Ok(r),
+        Err(_) => Repository::clone(url, &repo_dir), //TODO check error kind
     };
+    repo.expect(&format!("error opening repository {}", repo_dir.to_str().expect("path error")));
 }
