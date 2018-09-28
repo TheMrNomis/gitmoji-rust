@@ -11,13 +11,19 @@ fn config_path() -> PathBuf {
     return config_dir;
 }
 
+fn gitmoji_path() -> PathBuf {
+    let mut path = config_path();
+    path.push("gitmoji");
+
+    return path;
+}
+
 fn main() {
     let url = "https://github.com/carloscuesta/gitmoji/";
 
-    let mut gitmoji_dir = config_path();
-    gitmoji_dir.push("gitmoji");
+    let mut gitmoji_dir = gitmoji_path();
 
-    let repo = match Repository::clone(url, gitmoji_dir.to_str().expect("error")) {
+    let repo = match Repository::clone(url, gitmoji_dir) {
         Ok(repo) => repo,
         Err(e) => panic!("failed to clone: {}", e),
     };
