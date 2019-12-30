@@ -28,16 +28,6 @@ fn config_path() -> PathBuf {
     config_dir
 }
 
-fn clone_or_open_bare(url: &str, path: &PathBuf) -> Result<Repository, git2::Error> {
-    if path.is_dir() {
-        Repository::open_bare(path)
-    } else {
-        RepoBuilder::new()
-            .bare(true)
-            .clone(url, path)
-    }
-}
-
 fn emojis_need_update() -> Result<bool, RetrievingError> {
     let gitmoji_url = "https://github.com/carloscuesta/gitmoji/";
 
@@ -46,7 +36,17 @@ fn emojis_need_update() -> Result<bool, RetrievingError> {
     repo_path.push("gitmoji");
     let repo_path = repo_path;
 
-    let repo = clone_or_open_bare(gitmoji_url, &repo_path)?;
+    //if repo has to be cloned, we need to force the JSON download
+    let mut force_json_dl = false;
+
+    let repo = if repo_path.is_dir() {
+        Repository::open_bare(gitmoji_url)
+    } else {
+        force_json_dl = true;
+        RepoBuilder::new()
+                    .bare(true)
+                    .clone(gitmoji_url, &repo_path)
+    }?;
 
     //OID of the local master branch
     let mut master = repo.find_reference("refs/heads/master")?;
@@ -61,7 +61,7 @@ fn emojis_need_update() -> Result<bool, RetrievingError> {
                        .id();
 
    if local_oid == remote_oid {
-        return Ok(false);
+        return Ok(force_json_dl);
    }
 
    //fast-forward the local branch to the remote
