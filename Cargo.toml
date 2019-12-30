@@ -4,5 +4,8 @@ version = "0.1.0"
 authors = ["n0m1s <git@homnomnom.fr>"]
 
 [dependencies]
-git2 = "0.7"
+git2 = "0.11"
 dirs = "1.0.4"
+cfg-if="0.1.10"
+curl = "0.4.25"
+derive_more = "0.99.2"
