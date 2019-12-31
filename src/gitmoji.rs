@@ -2,7 +2,7 @@ extern crate git2;
 extern crate curl;
 extern crate derive_more;
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::io::Write;
 use std::fs::File;
 
@@ -12,13 +12,6 @@ use self::git2::Repository;
 use self::git2::build::RepoBuilder;
 
 use self::curl::easy::Easy;
-
-fn config_path() -> PathBuf {
-    let mut config_dir = dirs::config_dir().expect("cannot open config dir");
-    config_dir.push("gitmoji-rust");
-
-    config_dir
-}
 
 #[derive(Debug, From, Display)]
 pub enum RetrievingError {
@@ -60,22 +53,17 @@ impl Url {
     }
 }
 
-fn need_update(url: &Url) -> Result<bool, RetrievingError> {
-    //path to the "gitmoji" git repo
-    let mut repo_path = config_path();
-    repo_path.push("gitmoji");
-    let repo_path = repo_path;
-
+fn need_update(url: &Url, repo_path: &Path) -> Result<bool, RetrievingError> {
     //if repo has to be cloned, we need to force the JSON download
     let mut force_json_dl = false;
 
     let repo = if repo_path.is_dir() {
-        Repository::open_bare(&repo_path)
+        Repository::open_bare(repo_path)
     } else {
         force_json_dl = true;
         RepoBuilder::new()
             .bare(true)
-            .clone(&url.repo_url, &repo_path)
+            .clone(&url.repo_url, repo_path)
     }?;
 
     //OID of the local master branch
@@ -100,14 +88,10 @@ fn need_update(url: &Url) -> Result<bool, RetrievingError> {
     Ok(true)
 }
 
-pub fn update(url: &Url) -> Result<(), RetrievingError> {
-    if !need_update(url)? {
+pub fn update(url: &Url, repo_path: &Path, json_path: &Path) -> Result<(), RetrievingError> {
+    if !need_update(url, repo_path)? {
         return Ok(());
     }
-
-    let mut json_path = config_path();
-    json_path.push("gitmoji.json");
-    let json_path = json_path;
 
     let mut file = File::create(&json_path)?;
 
