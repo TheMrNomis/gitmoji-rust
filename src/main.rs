@@ -1,5 +1,5 @@
 mod gitmoji;
 
 fn main() {
-    gitmoji::update().unwrap();
+    gitmoji::update(&gitmoji::Url::default_github()).unwrap();
 }

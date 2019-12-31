@@ -27,9 +27,40 @@ pub enum RetrievingError {
     IO(std::io::Error),
 }
 
-fn need_update() -> Result<bool, RetrievingError> {
-    let gitmoji_url = "https://github.com/carloscuesta/gitmoji/";
+pub struct Url {
+    repo_url: String,
+    json_url: String,
+    branch:   String,
+}
 
+impl Url {
+    pub fn github(repo: Option<&str>, branch: Option<&str>, path: Option<&str>) -> Url {
+        let repo = match repo {
+            Some(x) => x,
+            None => "carloscuesta/gitmoji"
+        };
+        let branch = match branch {
+            Some(x) => x,
+            None => "master"
+        };
+        let path = match path {
+            Some(x) => x,
+            None => "src/data/gitmojis.json"
+        };
+
+        Url {
+            repo_url: format!("https://github.com/{}.git", repo),
+            json_url: format!("https://raw.githubusercontent.com/{}/{}/{}", repo, branch, path),
+            branch:   branch.to_owned(),
+        }
+    }
+
+    pub fn default_github() -> Url {
+        Url::github(None, None, None)
+    }
+}
+
+fn need_update(url: &Url) -> Result<bool, RetrievingError> {
     //path to the "gitmoji" git repo
     let mut repo_path = config_path();
     repo_path.push("gitmoji");
@@ -39,23 +70,23 @@ fn need_update() -> Result<bool, RetrievingError> {
     let mut force_json_dl = false;
 
     let repo = if repo_path.is_dir() {
-        Repository::open_bare(gitmoji_url)
+        Repository::open_bare(&repo_path)
     } else {
         force_json_dl = true;
         RepoBuilder::new()
             .bare(true)
-            .clone(gitmoji_url, &repo_path)
+            .clone(&url.repo_url, &repo_path)
     }?;
 
     //OID of the local master branch
-    let mut master = repo.find_reference("refs/heads/master")?;
+    let mut master = repo.find_reference(&format!("refs/heads/{}", url.branch))?;
     let local_oid = master.peel_to_commit()?.id();
 
     //fetch updates
-    repo.find_remote("origin")?.fetch(&["master"], None, None)?;
+    repo.find_remote("origin")?.fetch(&[&url.branch], None, None)?;
 
     //OID of the remote master branch
-    let remote_oid = repo.find_reference("refs/remotes/origin/master")?
+    let remote_oid = repo.find_reference(&format!("refs/remotes/origin/{}", url.branch))?
         .peel_to_commit()?
         .id();
 
@@ -69,8 +100,8 @@ fn need_update() -> Result<bool, RetrievingError> {
     Ok(true)
 }
 
-pub fn update() -> Result<(), RetrievingError> {
-    if !need_update()? {
+pub fn update(url: &Url) -> Result<(), RetrievingError> {
+    if !need_update(url)? {
         return Ok(());
     }
 
@@ -81,7 +112,7 @@ pub fn update() -> Result<(), RetrievingError> {
     let mut file = File::create(&json_path)?;
 
     let mut curl = Easy::new();
-    curl.url("https://raw.githubusercontent.com/carloscuesta/gitmoji/master/src/data/gitmojis.json")?;
+    curl.url(&url.json_url)?;
 
     let mut transfer = curl.transfer();
     transfer.write_function(|data| {
