@@ -98,8 +98,6 @@ pub fn update(url: &Url, repo_path: &Path, json_path: &Path) -> Result<(), Retri
     json_tmp_path.set_extension("json.new");
     let json_tmp_path = json_tmp_path;
 
-    println!("tmp: \"{}\", path: \"{}\"", json_tmp_path.display(), json_path.display());
-
     let mut file = File::create(&json_tmp_path)?;
 
     let mut curl = Easy::new();
