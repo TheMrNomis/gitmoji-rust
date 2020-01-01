@@ -2,7 +2,7 @@ extern crate git2;
 extern crate curl;
 extern crate derive_more;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::Write;
 use std::fs::File;
 
@@ -93,7 +93,14 @@ pub fn update(url: &Url, repo_path: &Path, json_path: &Path) -> Result<(), Retri
         return Ok(());
     }
 
-    let mut file = File::create(&json_path)?;
+    let mut json_tmp_path = PathBuf::new();
+    json_tmp_path.push(json_path);
+    json_tmp_path.set_extension("json.new");
+    let json_tmp_path = json_tmp_path;
+
+    println!("tmp: \"{}\", path: \"{}\"", json_tmp_path.display(), json_path.display());
+
+    let mut file = File::create(&json_tmp_path)?;
 
     let mut curl = Easy::new();
     curl.url(&url.json_url)?;
@@ -104,6 +111,8 @@ pub fn update(url: &Url, repo_path: &Path, json_path: &Path) -> Result<(), Retri
         Ok(data.len())
     })?;
     transfer.perform()?;
+
+    std::fs::rename(json_tmp_path, json_path)?;
 
     Ok(())
 }
