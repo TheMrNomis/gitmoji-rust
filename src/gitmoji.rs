@@ -1,10 +1,12 @@
 extern crate git2;
 extern crate curl;
 extern crate derive_more;
+extern crate serde;
+extern crate serde_json;
 
 use std::path::{Path, PathBuf};
-use std::io::Write;
 use std::fs::File;
+use std::io::{Read, Write};
 
 use self::derive_more::{Display, From};
 
@@ -13,11 +15,19 @@ use self::git2::build::RepoBuilder;
 
 use self::curl::easy::Easy;
 
+use self::serde::{Serialize, Deserialize};
+
 #[derive(Debug, From, Display)]
 pub enum RetrievingError {
     Git(git2::Error),
     Curl(curl::Error),
     IO(std::io::Error),
+}
+
+#[derive(Debug, From, Display)]
+pub enum LoadError {
+    IO(std::io::Error),
+    JSON(self::serde_json::Error),
 }
 
 pub struct Url {
@@ -113,4 +123,28 @@ pub fn update(url: &Url, repo_path: &Path, json_path: &Path) -> Result<(), Retri
     std::fs::rename(json_tmp_path, json_path)?;
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Gitmoji {
+    pub emoji:  String,
+    pub entity: Option<String>,
+    pub code:   String,
+    pub description: String,
+    pub name:   String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Gitmojis {
+    pub gitmojis: Vec<Gitmoji>,
+}
+
+impl Gitmojis {
+    pub fn load(file: &Path) -> Result<Gitmojis, LoadError> {
+        let mut json = String::new();
+        File::open(file)?.read_to_string(&mut json)?;
+        let ret: Gitmojis = serde_json::from_str(&json)?;
+
+        Ok(ret)
+    }
 }
