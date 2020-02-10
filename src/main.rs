@@ -1,4 +1,5 @@
 extern crate simsearch;
+extern crate termion;
 
 mod settings;
 mod gitmoji;
@@ -6,6 +7,11 @@ mod gitmoji;
 use settings::Settings;
 use gitmoji::Gitmojis;
 use simsearch::SimSearch;
+
+use termion::raw::IntoRawMode;
+use termion::event::Key;
+use termion::input::TermRead;
+use std::io::{Read, Write};
 
 fn main() {
     let settings = Settings::new(None);
@@ -21,7 +27,23 @@ fn main() {
         engine.insert(i, &format!("{}: {}", gitmoji.name, gitmoji.description));
     }
 
-    let results: Vec<usize> = engine.search("lip");
+    let stdin = std::io::stdin();
+    let mut stdout = std::io::stdout().into_raw_mode().unwrap();
+
+    let mut search = String::new();
+
+    for c in stdin.keys() {
+        match c.unwrap() {
+            Key::Esc => break,//TODO
+            Key::Ctrl('c') => break, //TODO
+            Key::Char('\n') => break,
+            Key::Char(c) => search.push(c),
+            _ => {}
+        }
+        stdout.flush().unwrap();
+    }
+
+    let results: Vec<usize> = engine.search(search.as_str());
     for i in results {
         let gitmoji = &db.gitmojis[i];
         println!("{} - {}", gitmoji.emoji, gitmoji.description);
